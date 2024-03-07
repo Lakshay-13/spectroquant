@@ -58,22 +58,54 @@ def calculate_derivatives(dataframe, derivative_orders, debug=False):
     if debug:
         print('Multiprocessing complete')
 
-    df_results = pd.DataFrame(results)
-
-    index_col = 'index'  
-    grouped = df_results.groupby(index_col)
-
-    reshaped_df = grouped.apply(lambda x: x.iloc[0]).reset_index(drop=True)
-
+    # Initialize a dictionary to hold the aggregated results
+    aggregated_results = {}
+    # Aggregate results by unique identifier (e.g., assuming 'index' is available)
+    for result in results:
+        record_id = result['index']  # Replace 'index' with your unique identifier
+        if record_id not in aggregated_results:
+            aggregated_results[record_id] = result
+        else:
+            for order in derivative_orders:
+                derivative_key = f'derivative_{order}'
+                if derivative_key in result:
+                    aggregated_results[record_id][derivative_key] = result[derivative_key]
+                    
+    # Convert the aggregated results back into a DataFrame
+    final_df = pd.DataFrame.from_dict(aggregated_results, orient='index').reset_index(drop=True)
+    
     if debug:
-        print('Groupby complete')
+        print('Aggregation complete')
 
-    for order in derivative_orders:
-        reshaped_df[f'derivative_{order}'] = grouped.apply(lambda x: x[f'derivative_{order}'].iloc[0]).values
+    return final_df.drop(["index"], axis=1)
 
-    if debug:
-        return results, reshaped_df.drop(['index'], axis=1)
-    return reshaped_df.drop(['index'], axis=1)
+# def calculate_derivatives(dataframe, derivative_orders, debug=False):
+#     records = dataframe.reset_index().to_dict(orient='records')
+#     tasks = list(product(records, derivative_orders)) 
+#     if debug:
+#         print('Starting multiprocessing')
+#     with multiprocessing.Pool() as pool:
+#         results = pool.starmap(process_record, tasks)
+
+#     if debug:
+#         print('Multiprocessing complete')
+
+#     df_results = pd.DataFrame(results)
+
+#     index_col = 'index'  
+#     grouped = df_results.groupby(index_col)
+
+#     reshaped_df = grouped.apply(lambda x: x.iloc[0]).reset_index(drop=True)
+
+#     if debug:
+#         print('Groupby complete')
+
+#     for order in derivative_orders:
+#         reshaped_df[f'derivative_{order}'] = grouped.apply(lambda x: x[f'derivative_{order}'].iloc[0]).values
+
+#     if debug:
+#         return results, reshaped_df.drop(['index'], axis=1)
+#     return reshaped_df.drop(['index'], axis=1)
 
 def plot_spectra(wavelengths, values, title=None, xlabel=None, ylabel=None, grid=True, save=False):
     
